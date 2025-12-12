@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Motherboard OS v2 - Digital Circuit IDE</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <--n-gpu-layers Tailwind (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="bg-pcb-dark text-circuit-green">
+  <--n-gpu-layers Boot overlay -->
+  <div id="boot-overlay" class="boot-overlay fixed inset-0 flex flex-col items-center justify-center z-50">
+    <div class="text-5xl mb-4 text-circuit-blue">⚡</div>
+    <div class="text-3xl font-bold mb-2">MOTHERBOARD OS v2</div>
+    <div class="text-lg text-circuit-orange mb-6">Digital Circuit Development Environment</div>
+    <div class="terminal-window w-11/12 max-w-xl p-4 text-xs">
+      <div id="boot-log" class="h-40 overflow-y-auto font-mono space-y-1"></div>
+      <div class="progress-bar mt-4">
+        <div id="boot-progress" class="progress-fill"></div>
+      </div>
+      <div id="boot-status" class="mt-2 text-circuit-yellow font-mono text-xs">
+        Initializing...
+      </div>
+    </div>
+  </div>
+
+  <--n-gpu-layers Main layout -->
+  <div id="app-root" class="w-full h-screen hidden overflow-hidden relative">
+    <--n-gpu-layers Left: Motherboard Canvas -->
+    <div class="absolute inset-y-0 left-0 w-2/3 border-r border-circuit-green/40 flex flex-col">
+      <div class="flex items-center justify-between px-4 py-2 bg-black/60 border-b border-circuit-green/40">
+        <div class="font-mono text-xs text-circuit-green">Motherboard Canvas</div>
+        <div class="space-x-2 text-xs">
+          <button id="btn-run" class="btn-primary">Run</button>
+          <button id="btn-stop" class="btn-secondary">Stop</button>
+          <button id="btn-step" class="btn-secondary">Step</button>
+          <button id="btn-reset" class="btn-secondary">Reset</button>
+        </div>
+      </div>
+      <div id="board-container" class="flex-1 relative overflow-hidden">
+        <svg id="board-wires" class="absolute inset-0 w-full h-full pointer-events-none"></svg>
+        <div id="board-components" class="absolute inset-0"></div>
+      </div>
+      <div class="flex items-center justify-between px-4 py-1 bg-black/70 border-t border-circuit-green/40 text-[10px] font-mono">
+        <div>CPU: <span id="stat-cpu">0%</span> • RAM: <span id="stat-ram">0%</span> • Ticks: <span id="stat-ticks">0</span></div>
+        <div>AI: <span id="stat-ai">idle</span></div>
+      </div>
+    </div>
+
+    <--n-gpu-layers Right: Panels -->
+    <div class="absolute inset-y-0 right-0 w-1/3 flex flex-col bg-black/70">
+      <--n-gpu-layers Tabs -->
+      <div class="flex items-center border-b border-circuit-green/40 text-xs font-mono">
+        <button data-panel-tab="editor" class="panel-tab active flex-1 px-2 py-1 text-center">Editor</button>
+        <button data-panel-tab="terminal" class="panel-tab flex-1 px-2 py-1 text-center">Terminal</button>
+        <button data-panel-tab="ai" class="panel-tab flex-1 px-2 py-1 text-center">AI Core</button>
+        <button data-panel-tab="settings" class="panel-tab flex-1 px-2 py-1 text-center">Settings</button>
+      </div>
+      <--n-gpu-layers Panels -->
+      <div class="flex-1 relative">
+        <--n-gpu-layers Editor Panel -->
+        <div id="panel-editor" class="panel active flex flex-col h-full">
+          <div class="flex items-center justify-between px-2 py-1 border-b border-circuit-green/40 text-[10px]">
+            <div class="font-mono">HDL / Firmware</div>
+            <div class="space-x-1">
+              <button id="btn-save-project" class="btn-secondary">Save</button>
+              <button id="btn-load-project" class="btn-secondary">Load</button>
+              <button id="btn-compile-hdl" class="btn-primary">Compile</button>
+            </div>
+          </div>
+          <div id="editor-container" class="flex-1"></div>
+        </div>
+
+        <--n-gpu-layers Terminal Panel -->
+        <div id="panel-terminal" class="panel hidden flex flex-col h-full">
+          <div class="flex items-center justify-between px-2 py-1 border-b border-circuit-green/40 text-[10px]">
+            <div class="font-mono">Dev Terminal</div>
+            <div class="space-x-1">
+              <button id="btn-term-clear" class="btn-secondary">Clear</button>
+            </div>
+          </div>
+          <div id="terminal-output" class="flex-1 overflow-y-auto p-2 text-[10px] font-mono"></div>
+          <div class="flex items-center border-t border-circuit-green/40 px-2 py-1 text-[10px]">
+            <span class="text-circuit-green mr-1">$</span>
+            <input id="terminal-input" class="flex-1 bg-transparent outline-none border-none text-circuit-green placeholder-circuit-green/40" placeholder="status | help | run | stop | list | save &lt;name&gt; | load &lt;name&gt;" />
+          </div>
+        </div>
+
+        <--n-gpu-layers AI Panel -->
+        <div id="panel-ai" class="panel hidden flex flex-col h-full">
+          <div class="flex items-center justify-between px-2 py-1 border-b border-circuit-green/40 text-[10px]">
+            <div class="font-mono">AI Copilot</div>
+            <div class="space-x-1">
+              <select id="ai-provider" class="bg-black/80 border border-circuit-purple/50 text-[10px] px-1 py-[1px]">
+                <option value="openai">OpenAI</option>
+                <option value="claude">Claude</option>
+                <option value="gemini">Gemini</option>
+              </select>
+              <button id="btn-ai-generate-hdl" class="btn-secondary">HDL</button>
+              <button id="btn-ai-explain" class="btn-secondary">Explain</button>
+              <button id="btn-ai-fix" class="btn-secondary">Fix</button>
+            </div>
+          </div>
+          <div class="flex-1 flex flex-col">
+            <textarea id="ai-prompt" class="flex-1 bg-black/40 text-[10px] font-mono p-2 border-b border-circuit-green/40" placeholder="Describe the circuit or code you want..."></textarea>
+            <div id="ai-output" class="h-32 overflow-y-auto p-2 text-[10px] font-mono"></div>
+          </div>
+        </div>
+
+        <--n-gpu-layers Settings Panel -->
+        <div id="panel-settings" class="panel hidden flex flex-col h-full text-[11px] font-mono">
+          <div class="px-2 py-1 border-b border-circuit-green/40 text-[10px]">Settings & API Keys</div>
+          <div class="flex-1 overflow-y-auto p-3 space-y-3">
+            <div>
+              <div class="font-bold mb-1 text-circuit-yellow">API Providers</div>
+              <label class="block mb-1">OpenAI API Key</label>
+              <input id="setting-openai-key" type="password" class="setting-input" placeholder="sk-..." />
+              <label class="block mt-2 mb-1">Claude API Key</label>
+              <input id="setting-claude-key" type="password" class="setting-input" placeholder="sk-ant-..." />
+              <label class="block mt-2 mb-1">Gemini API Key</label>
+              <input id="setting-gemini-key" type="password" class="setting-input" placeholder="AIza..." />
+              <button id="btn-save-settings" class="btn-primary mt-3">Save Settings</button>
+            </div>
+            <div class="pt-2 border-t border-circuit-green/40">
+              <div class="font-bold mb-1 text-circuit-blue">Simulation</div>
+              <label class="block mb-1">Tick Interval (ms)</label>
+              <input id="setting-tick-interval" type="number" class="setting-input" value="50" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <--n-gpu-layers Monaco loader -->
+  <script>
+    window.require = { paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs' } };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs/loader.js"></script>
+
+  <--n-gpu-layers Main app -->
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
